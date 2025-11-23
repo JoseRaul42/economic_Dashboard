@@ -167,13 +167,11 @@
 	.chart-card {
 		background-color: var(--color-bg-card);
 		border: 1px solid var(--color-border);
-		border-radius: 8px;
+		border-top-left-radius: 8px;
+		border-top-right-radius: 8px;
+		border-bottom: none;
 		padding: 1.5rem;
 		transition: border-color 0.3s ease;
-	}
-
-	.chart-card:hover {
-		border-color: var(--color-accent);
 	}
 
 	.chart-header {

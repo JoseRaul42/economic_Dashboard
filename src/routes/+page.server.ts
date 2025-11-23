@@ -94,25 +94,25 @@ export const load: PageServerLoad = async () => {
 		const series: Series[] = [
 			{
 				key: 'wti',
-				label: 'WTI Crude Oil',
+				label: 'WTI Crude Oil (MoM)',
 				units: 'USD/barrel',
 				points: normalizeAlphaVantageData(wtiData, 'wti')
 			},
 			{
 				key: 'unemployment',
-				label: 'Unemployment Rate',
+				label: 'Unemployment Rate (MoM)',
 				units: '%',
 				points: normalizeAlphaVantageData(unemploymentData, 'unemployment')
 			},
 			{
 				key: 'ngas',
-				label: 'Henry Hub Natural Gas',
+				label: 'Henry Hub Natural Gas (MoM)',
 				units: 'USD/MMBtu',
 				points: normalizeAlphaVantageData(ngasData, 'ngas')
 			},
 			{
 				key: 'cpi',
-				label: 'Consumer Price Index',
+				label: 'Consumer Price Index (MoM)',
 				units: 'Index',
 				points: normalizeAlphaVantageData(cpiData, 'cpi')
 			},
