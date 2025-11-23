@@ -1,111 +1,195 @@
 <script lang="ts">
 	import type { PageData } from './$types';
+	import ChartCard from '$lib/components/ChartCard.svelte';
+	import IndicatorKpiRow from '$lib/components/IndicatorKpiRow.svelte';
 
 	let { data }: { data: PageData } = $props();
 
-	interface TimeSeriesEntry {
-		'1. open': string;
-		'2. high': string;
-		'3. low': string;
-		'4. close': string;
-		'5. volume': string;
-	}
-
-	interface UnemploymentEntry {
-		date: string;
-		value: string;
-	}
-
-	// Extract time series data
-	const timeSeries = data.timeSeries?.['Monthly Time Series'] || {};
-	const entries = Object.entries(timeSeries).slice(0, 5) as [string, TimeSeriesEntry][];
-
-	// Extract unemployment data
-	const unemploymentData = data.unemployment?.data || [];
-	const unemploymentEntries = unemploymentData.slice(0, 5) as UnemploymentEntry[];
+	const wtiSeries = $derived(data.series.find((s) => s.key === 'wti'));
+	const unemploymentSeries = $derived(data.series.find((s) => s.key === 'unemployment'));
+	const ngasSeries = $derived(data.series.find((s) => s.key === 'ngas'));
+	const cpiSeries = $derived(data.series.find((s) => s.key === 'cpi'));
+	const inflationSeries = $derived(data.series.find((s) => s.key === 'inflation'));
 </script>
 
-<h1>Stock Market Data</h1>
-<p>Source: U.S. Energy Information Administration, Crude Oil Prices: West Texas Intermediate (WTI) - Cushing, Oklahoma, retrieved from FRED, Federal Reserve Bank of St. Louis.</p>
+<svelte:head>
+	<title>US Economic Dashboard</title>
+</svelte:head>
 
-{#if entries.length > 0}
-	<table>
-		<thead>
-			<tr>
-				<th>Date</th>
-				<th>Open</th>
-				<th>High</th>
-				<th>Low</th>
-				<th>Close</th>
-				<th>Volume</th>
-			</tr>
-		</thead>
-		<tbody>
-			{#each entries as [date, values] (date)}
-				<tr>
-					<td>{date}</td>
-					<td>{values['1. open']}</td>
-					<td>{values['2. high']}</td>
-					<td>{values['3. low']}</td>
-					<td>{values['4. close']}</td>
-					<td>{values['5. volume']}</td>
-				</tr>
-			{/each}
-		</tbody>
-	</table>
-{:else}
-	<p>No data available. Check your API key configuration.</p>
-{/if}
+<div class="dashboard">
+	<header class="hero">
+		<h1 class="hero-title">US Economic Dashboard</h1>
+		<p class="hero-subtitle">
+			Real-time tracking of key economic indicators and energy spot prices
+		</p>
+	</header>
 
-<h1>US Unemployment Rate Data</h1>
-<p>Source: U.S. Bureau of Labor Statistics, Unemployment Rate, retrieved from FRED, Federal Reserve Bank of St. Louis. This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.</p>
+	<section class="kpi-section">
+		<div class="kpi-grid">
+			{#if wtiSeries}
+				<IndicatorKpiRow label={wtiSeries.label} points={wtiSeries.points} units={wtiSeries.units} />
+			{/if}
+			{#if unemploymentSeries}
+				<IndicatorKpiRow
+					label={unemploymentSeries.label}
+					points={unemploymentSeries.points}
+					units={unemploymentSeries.units}
+				/>
+			{/if}
+			{#if ngasSeries}
+				<IndicatorKpiRow label={ngasSeries.label} points={ngasSeries.points} units={ngasSeries.units} />
+			{/if}
+			{#if cpiSeries}
+				<IndicatorKpiRow label={cpiSeries.label} points={cpiSeries.points} units={cpiSeries.units} />
+			{/if}
+			{#if inflationSeries}
+				<IndicatorKpiRow
+					label={inflationSeries.label}
+					points={inflationSeries.points}
+					units={inflationSeries.units}
+				/>
+			{/if}
+		</div>
+	</section>
 
-{#if unemploymentEntries.length > 0}
-	<table>
-		<thead>
-			<tr>
-				<th>Date</th>
-				<th>Unemployment Rate (%)</th>
-			</tr>
-		</thead>
-		<tbody>
-			{#each unemploymentEntries as entry (entry.date)}
-				<tr>
-					<td>{entry.date}</td>
-					<td>{entry.value}</td>
-				</tr>
-			{/each}
-		</tbody>
-	</table>
-{:else}
-	<p>No unemployment data available. Check your API key configuration.</p>
-{/if}
+	<section class="charts-section">
+		<div class="charts-grid">
+			{#if wtiSeries}
+				<ChartCard
+					title={wtiSeries.label}
+					subtitle="Monthly spot prices from EIA"
+					points={wtiSeries.points}
+					units={wtiSeries.units}
+					color="#ff5a1f"
+				/>
+			{/if}
+
+			{#if unemploymentSeries}
+				<ChartCard
+					title={unemploymentSeries.label}
+					subtitle="U.S. Bureau of Labor Statistics"
+					points={unemploymentSeries.points}
+					units={unemploymentSeries.units}
+					color="#ff7a3f"
+				/>
+			{/if}
+
+			{#if ngasSeries}
+				<ChartCard
+					title={ngasSeries.label}
+					subtitle="Henry Hub monthly spot prices"
+					points={ngasSeries.points}
+					units={ngasSeries.units}
+					color="#ff9a5f"
+				/>
+			{/if}
+
+			{#if cpiSeries}
+				<ChartCard
+					title={cpiSeries.label}
+					subtitle="Month-over-month consumer prices"
+					points={cpiSeries.points}
+					units={cpiSeries.units}
+					color="#ffba7f"
+				/>
+			{/if}
+
+			{#if inflationSeries}
+				<ChartCard
+					title={inflationSeries.label}
+					subtitle="Year-over-year inflation rate"
+					points={inflationSeries.points}
+					units={inflationSeries.units}
+					color="#ffd09f"
+				/>
+			{/if}
+		</div>
+	</section>
+
+	<footer class="dashboard-footer">
+		<p class="footer-text">
+			Data sources: AlphaVantage API • U.S. Energy Information Administration • Federal Reserve
+			Economic Data (FRED)
+		</p>
+	</footer>
+</div>
 
 <style>
-	table {
-		border-collapse: collapse;
-		width: 100%;
-		margin-top: 1rem;
+	.dashboard {
+		max-width: 1400px;
+		margin: 0 auto;
+		padding: 2rem 1rem;
 	}
 
-	th,
-	td {
-		border: 1px solid #ddd;
-		padding: 0.75rem;
-		text-align: left;
+	.hero {
+		text-align: center;
+		margin-bottom: 3rem;
+		padding: 2rem 0;
 	}
 
-	th {
-		background-color: #f2f2f2;
-		font-weight: bold;
+	.hero-title {
+		font-size: 2.5rem;
+		font-weight: 700;
+		color: var(--color-accent);
+		margin-bottom: 0.5rem;
+		letter-spacing: -0.02em;
 	}
 
-	tr:nth-child(even) {
-		background-color: #f9f9f9;
+	.hero-subtitle {
+		font-size: 1.125rem;
+		color: var(--color-text-muted);
+		max-width: 600px;
+		margin: 0 auto;
 	}
 
-	tr:hover {
-		background-color: #f5f5f5;
+	.kpi-section {
+		margin-bottom: 3rem;
+	}
+
+	.kpi-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+		gap: 1rem;
+	}
+
+	.charts-section {
+		margin-bottom: 3rem;
+	}
+
+	.charts-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+		gap: 1.5rem;
+	}
+
+	@media (max-width: 768px) {
+		.hero-title {
+			font-size: 2rem;
+		}
+
+		.hero-subtitle {
+			font-size: 1rem;
+		}
+
+		.charts-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.kpi-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	.dashboard-footer {
+		margin-top: 4rem;
+		padding-top: 2rem;
+		border-top: 1px solid var(--color-border);
+		text-align: center;
+	}
+
+	.footer-text {
+		font-size: 0.875rem;
+		color: var(--color-text-muted);
 	}
 </style>
 
