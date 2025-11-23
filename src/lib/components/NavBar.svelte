@@ -52,9 +52,6 @@
 					Sources
 				</button>
 			</li>
-			<li>
-				<button class="nav-link" onclick={() => scrollToSection('about')}>About</button>
-			</li>
 		</ul>
 	</div>
 </nav>
