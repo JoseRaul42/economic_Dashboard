@@ -29,7 +29,7 @@
 		<div class="container">
 			<h1 class="hero-title">US Economic & Energy Dashboard</h1>
 			<p class="hero-subtitle">
-				Tracking the intersection of macroeconomic indicators and energy markets through clean,
+				Tracking macroeconomic indicators and energy markets through clean,
 				real-time visualizations
 			</p>
 		</div>
