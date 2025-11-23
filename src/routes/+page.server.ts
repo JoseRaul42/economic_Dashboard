@@ -5,6 +5,14 @@ import { getMonthlyConsumerPriceIndexData } from '$lib/server/monthlyConsumerPri
 import { getYearlyInflationData } from '$lib/server/yearlyInflation';
 import type { PageServerLoad } from './$types';
 
+// Enable ISR (Incremental Static Regeneration) for Vercel
+// This caches the page for 1 hour to avoid hitting API rate limits
+export const config = {
+	isr: {
+		expiration: 3600 // Cache for 1 hour (3600 seconds)
+	}
+};
+
 export interface DataPoint {
 	date: string;
 	value: number;
@@ -59,8 +67,13 @@ function normalizeAlphaVantageData(rawData: RawApiResponse | null, key: string):
 		.filter((item): item is DataPoint => item !== null);
 }
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ setHeaders }) => {
 	try {
+		// Set cache headers for CDN and browser caching
+		setHeaders({
+			'cache-control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400'
+		});
+
 		const [wtiData, unemploymentData, ngasData, cpiData, inflationData] = await Promise.all([
 			getMonthlyTimeSeries().catch((e) => {
 				console.error('WTI fetch error:', e);
@@ -84,12 +97,20 @@ export const load: PageServerLoad = async () => {
 			})
 		]);
 
-		// Log raw data for debugging
-		console.log('Raw WTI data:', JSON.stringify(wtiData).substring(0, 200));
-		console.log('Raw Unemployment data:', JSON.stringify(unemploymentData).substring(0, 200));
-		console.log('Raw NGAS data:', JSON.stringify(ngasData).substring(0, 200));
-		console.log('Raw CPI data:', JSON.stringify(cpiData).substring(0, 200));
-		console.log('Raw Inflation data:', JSON.stringify(inflationData).substring(0, 200));
+		// Log raw data for debugging (visible in Vercel Function Logs)
+		console.log('[API Debug] WTI data:', JSON.stringify(wtiData).substring(0, 300));
+		console.log('[API Debug] Unemployment data:', JSON.stringify(unemploymentData).substring(0, 300));
+		console.log('[API Debug] NGAS data:', JSON.stringify(ngasData).substring(0, 300));
+		console.log('[API Debug] CPI data:', JSON.stringify(cpiData).substring(0, 300));
+		console.log('[API Debug] Inflation data:', JSON.stringify(inflationData).substring(0, 300));
+
+		// Check for API rate limit messages
+		if (wtiData && 'Note' in wtiData) {
+			console.warn('[API Rate Limit] WTI:', wtiData.Note);
+		}
+		if (unemploymentData && 'Note' in unemploymentData) {
+			console.warn('[API Rate Limit] Unemployment:', unemploymentData.Note);
+		}
 
 		const series: Series[] = [
 			{
