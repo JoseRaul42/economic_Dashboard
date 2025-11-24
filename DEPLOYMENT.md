@@ -148,3 +148,4 @@ If you need more frequent updates or higher traffic:
 
 **Alternative:** Consider switching to a different data provider with higher free tier limits.
 
+

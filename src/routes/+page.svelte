@@ -27,7 +27,7 @@
 	<!-- Hero Section -->
 	<section id="overview" class="hero-section">
 		<div class="container">
-			<h1 class="hero-title">US Economic & Energy Dashboard</h1>
+			<h1 class="hero-title">US Economy & Upstream Energy Dashboard</h1>
 			<p class="hero-subtitle">
 				Tracking macroeconomic indicators and energy markets through clean,
 				real-time visualizations
