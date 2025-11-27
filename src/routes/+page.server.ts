@@ -63,15 +63,20 @@ interface CacheData {
 	};
 }
 
-const CACHE_FILE = '.api-cache.json';
+// Detect if we're in production (Vercel)
+const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+
+// Use /tmp in production (Vercel), current directory in dev
+const CACHE_DIR = isProduction ? '/tmp' : '.';
+const CACHE_FILE = path.join(CACHE_DIR, 'api-cache.json');
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-const INSIGHTS_CACHE_FILE = '.insights-cache.json';
+const INSIGHTS_CACHE_FILE = path.join(CACHE_DIR, 'insights-cache.json');
 
 // Helper to fetch Perplexity insights with monthly caching
 async function fetchInsightsWithMonthlyCache(
 	fetchFn: () => Promise<PerplexityInsightResponse>
 ): Promise<PerplexityInsightResponse> {
-	const cachePath = path.resolve(INSIGHTS_CACHE_FILE);
+	const cachePath = INSIGHTS_CACHE_FILE;
 	const now = new Date();
 
 	// Try to read from cache
@@ -152,28 +157,30 @@ async function fetchInsightsWithMonthlyCache(
 	}
 }
 
-// Helper to fetch with local file caching
+// Helper to fetch with local file caching (dev only, ISR handles production)
 async function fetchWithCache<T>(key: string, fetchFn: () => Promise<T>): Promise<T | null> {
 	let cache: CacheData = { timestamp: 0, data: {} };
-	const cachePath = path.resolve(CACHE_FILE);
+	const cachePath = CACHE_FILE;
 
-	// Try to read from cache
-	try {
-		if (fs.existsSync(cachePath)) {
-			const fileContent = fs.readFileSync(cachePath, 'utf-8');
-			cache = JSON.parse(fileContent);
+	// Try to read from cache (skip in production - ISR handles it)
+	if (!isProduction) {
+		try {
+			if (fs.existsSync(cachePath)) {
+				const fileContent = fs.readFileSync(cachePath, 'utf-8');
+				cache = JSON.parse(fileContent);
+			}
+		} catch (e) {
+			// Silently skip if file system is unavailable
 		}
-	} catch (e) {
-		console.warn('Failed to read cache file:', e);
-	}
 
-	const now = Date.now();
-	const isFresh = now - cache.timestamp < CACHE_TTL;
+		const now = Date.now();
+		const isFresh = now - cache.timestamp < CACHE_TTL;
 
-	// Return cached data if fresh and exists
-	if (isFresh && cache.data[key]) {
-		console.log(`[Cache] Serving ${key} from local cache`);
-		return cache.data[key] as T;
+		// Return cached data if fresh and exists
+		if (isFresh && cache.data[key]) {
+			console.log(`[Cache] Serving ${key} from local cache`);
+			return cache.data[key] as T;
+		}
 	}
 
 	// Fetch fresh data
@@ -190,46 +197,32 @@ async function fetchWithCache<T>(key: string, fetchFn: () => Promise<T>): Promis
 				console.warn(`[Cache] Serving stale data for ${key} due to API error`);
 				return cache.data[key] as T;
 			}
-			// If no stale data, we have to return the error (or null?)
-			// Returning the error allows the UI to handle it (or show N/A)
+			// Return error data (UI will show N/A)
 			return data;
 		}
 
-		// Update cache only if valid data
-		cache.data[key] = data;
-		cache.timestamp = now;
-		// Actually, if we update one key, we should probably keep the old timestamp for others?
-		// But for simplicity, let's just update the timestamp if we are updating the file.
-		// Better strategy: If cache is expired, we might re-fetch everything?
-		// Or just update this specific key and keep the timestamp? 
-		// If we update the timestamp, other stale keys might be considered fresh.
-		// This is tricky with Promise.all running in parallel.
-		// They will all read the file, see it's stale, and all fetch.
-		// Then they will all try to write.
-		// This is fine for the "first load" case.
+		// Update cache only if valid data and in development
+		if (!isProduction) {
+			cache.data[key] = data;
+			cache.timestamp = Date.now();
 
-		// Let's re-read cache before writing to avoid race conditions (simple version)
-		try {
-			if (fs.existsSync(cachePath)) {
-				const currentFileContent = fs.readFileSync(cachePath, 'utf-8');
-				const currentCache = JSON.parse(currentFileContent);
-				cache.data = { ...currentCache.data, ...cache.data };
-				// If the file was stale, we are making it fresh now.
-				// But we only fetched ONE key here.
-				// If we update timestamp now, other keys (which we haven't fetched yet) will look fresh.
-				// This is tricky with Promise.all running in parallel.
-				// They will all read the file, see it's stale, and all fetch.
-				// Then they will all try to write.
-				// This is fine for the "first load" case.
+			// Re-read cache before writing to merge changes
+			try {
+				if (fs.existsSync(cachePath)) {
+					const currentFileContent = fs.readFileSync(cachePath, 'utf-8');
+					const currentCache = JSON.parse(currentFileContent);
+					cache.data = { ...currentCache.data, ...cache.data };
+				}
+			} catch (e) {
+				// ignore
 			}
-		} catch (e) {
-			// ignore
-		}
 
-		try {
-			fs.writeFileSync(cachePath, JSON.stringify(cache, null, 2));
-		} catch (e) {
-			console.warn('Failed to write cache file:', e);
+			// Write to cache (skip if fails in production)
+			try {
+				fs.writeFileSync(cachePath, JSON.stringify(cache, null, 2));
+			} catch (e) {
+				// Silently skip cache write in production (read-only file system)
+			}
 		}
 
 		return data;
