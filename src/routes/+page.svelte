@@ -11,6 +11,11 @@
 	const ngasSeries = $derived(data.series.find((s) => s.key === 'ngas'));
 	const cpiSeries = $derived(data.series.find((s) => s.key === 'cpi'));
 	const inflationSeries = $derived(data.series.find((s) => s.key === 'inflation'));
+	const fedFundsSeries = $derived(data.series.find((s) => s.key === 'fedFunds'));
+	const gdpSeries = $derived(data.series.find((s) => s.key === 'gdp'));
+	const treasurySeries = $derived(data.series.find((s) => s.key === 'treasury'));
+
+	const insights = $derived(data.insights || []);
 </script>
 
 <svelte:head>
@@ -115,6 +120,83 @@
 		</div>
 	</section>
 
+	<!-- Monetary Policy & Growth Section -->
+	<section id="monetary" class="section monetary-section">
+		<div class="container">
+			<div class="section-header">
+				<h2 class="section-title">Monetary Policy & Growth</h2>
+				<p class="section-description">
+					Key indicators of economic health and Federal Reserve policy stance
+				</p>
+			</div>
+
+			<div class="charts-grid">
+				{#if fedFundsSeries}
+					<ChartSectionCard
+						title={fedFundsSeries.label}
+						subtitle="Effective Federal Funds Rate"
+						points={fedFundsSeries.points}
+						units={fedFundsSeries.units}
+						color="#3b82f6"
+						sources={[
+							{
+								label: 'Federal Reserve',
+								url: 'https://www.federalreserve.gov/monetarypolicy/openmarket.htm'
+							},
+							{
+								label: 'FRED - FEDFUNDS',
+								url: 'https://fred.stlouisfed.org/series/FEDFUNDS'
+							}
+						]}
+						takeaway="The Federal Funds Rate is the interest rate at which depository institutions trade federal funds (balances held at Federal Reserve Banks) with each other overnight. It is the central bank's primary tool for monetary policy."
+					/>
+				{/if}
+
+				{#if gdpSeries}
+					<ChartSectionCard
+						title={gdpSeries.label}
+						subtitle="Real Gross Domestic Product"
+						points={gdpSeries.points}
+						units={gdpSeries.units}
+						color="#10b981"
+						sources={[
+							{
+								label: 'U.S. Bureau of Economic Analysis',
+								url: 'https://www.bea.gov/data/gdp/gross-domestic-product'
+							},
+							{
+								label: 'FRED - GDPC1',
+								url: 'https://fred.stlouisfed.org/series/GDPC1'
+							}
+						]}
+						takeaway="Real GDP is the inflation-adjusted value of the goods and services produced by labor and property located in the United States. It is the broadest measure of economic activity and the primary indicator of the economy's health."
+					/>
+				{/if}
+
+				{#if treasurySeries}
+					<ChartSectionCard
+						title={treasurySeries.label}
+						subtitle="10-Year Treasury Constant Maturity Rate"
+						points={treasurySeries.points}
+						units={treasurySeries.units}
+						color="#8b5cf6"
+						sources={[
+							{
+								label: 'U.S. Department of the Treasury',
+								url: 'https://home.treasury.gov/'
+							},
+							{
+								label: 'FRED - DGS10',
+								url: 'https://fred.stlouisfed.org/series/DGS10'
+							}
+						]}
+						takeaway="The 10-year Treasury yield is a benchmark for interest rates on mortgages and other loans. It reflects investor confidence and inflation expectations. An inverted yield curve (10-year lower than 2-year) often signals a recession."
+					/>
+				{/if}
+			</div>
+		</div>
+	</section>
+
 	<!-- Energy Spot Prices Section -->
 	<section id="energy" class="section energy-section">
 		<div class="container">
@@ -172,6 +254,32 @@
 		</div>
 	</section>
 
+	<!-- Market Insights Section -->
+	<section id="insights" class="section insights-section">
+		<div class="container">
+			<div class="section-header">
+				<h2 class="section-title">Market Insights</h2>
+				<p class="section-description">
+					Automated analysis of correlations and market volatility
+				</p>
+			</div>
+
+			<div class="insights-grid">
+				{#each insights as insight}
+					<div class="insight-card">
+						<div class="insight-header">
+							<h3 class="insight-title">{insight.title}</h3>
+							<div class="insight-value" class:positive={insight.trend === 'up'} class:negative={insight.trend === 'down'}>
+								{insight.value}
+							</div>
+						</div>
+						<p class="insight-description">{insight.description}</p>
+					</div>
+				{/each}
+			</div>
+		</div>
+	</section>
+
 	<!-- Methodology Section -->
 	<section id="methodology" class="section methodology-section">
 		<div class="container">
@@ -190,14 +298,15 @@
 								<strong>Federal Reserve Economic Data (FRED)</strong> — Historical economic time series
 							</li>
 							<li><strong>U.S. Bureau of Labor Statistics</strong> — Employment and price data</li>
+							<li><strong>AlphaVantage</strong> — Real-time economic indicators API</li>
 						</ul>
 					</div>
 
 					<div class="methodology-item">
 						<h3 class="methodology-subtitle">Data Frequency</h3>
 						<ul class="methodology-list">
-							<li><strong>Monthly:</strong> CPI, unemployment, energy spot prices</li>
-							<li><strong>Annual:</strong> Year-over-year inflation calculations</li>
+							<li><strong>Monthly:</strong> CPI, unemployment, energy spot prices, fed funds</li>
+							<li><strong>Annual:</strong> Real GDP, Year-over-year inflation calculations</li>
 							<li><strong>Updates:</strong> Data refreshed on page load from live APIs</li>
 						</ul>
 					</div>
@@ -211,7 +320,8 @@
 							<li>
 								<strong>Year-over-Year (YoY):</strong> Percentage change from same month last year
 							</li>
-							<li><strong>Spot Prices:</strong> Current market prices, no averaging applied</li>
+							<li><strong>Correlation:</strong> Pearson correlation coefficient between time series</li>
+							<li><strong>Volatility:</strong> Annualized standard deviation of monthly percent changes</li>
 						</ul>
 					</div>
 
@@ -228,47 +338,6 @@
 			</div>
 		</div>
 	</section>
-
-	<!-- About Section
-	<section id="about" class="section about-section">
-		<div class="container">
-			<div class="content-card">
-				<h2 class="content-title">Why I Built This Dashboard</h2>
-
-				<div class="about-content">
-					<p>
-						This project emerged from a desire to understand how macroeconomic indicators and energy
-						markets influence each other. Energy prices—particularly oil and natural gas—are both a
-						cause and effect of broader economic trends. Rising energy costs can drive inflation,
-						while economic slowdowns reduce energy demand and prices.
-					</p>
-
-					<p>
-						I wanted to create a tool that makes these relationships visible and digestible. Rather
-						than jumping between multiple government websites and data portals, this dashboard brings
-						key indicators together in one place with clean, modern visualizations. The goal is to
-						make complex economic data accessible without sacrificing depth or accuracy.
-					</p>
-
-					<p>
-						From a technical perspective, this project demonstrates several skills I value:
-						<strong>full-stack development</strong> with SvelteKit's server-side rendering,
-						<strong>data visualization</strong> with interactive charts,
-						<strong>API integration</strong> from multiple sources, and
-						<strong>UI/UX design</strong> that prioritizes clarity and usability. The dashboard is
-						responsive, performant, and built with modern web standards.
-					</p>
-
-					<p>
-						Whether you're tracking inflation trends, monitoring energy markets, or just curious about
-						the economy, I hope this dashboard provides value. All data is pulled from authoritative
-						sources and updated in real-time, ensuring you're always working with the latest
-						information.
-					</p>
-				</div>
-			</div>
-		</div>
-	</section> -->
 
 	<!-- Footer -->
 	<footer class="footer">
@@ -359,6 +428,15 @@
 		color: var(--color-accent);
 	}
 
+	/* Monetary Section */
+	.monetary-section {
+		background: linear-gradient(180deg, rgba(59, 130, 246, 0.03) 0%, rgba(10, 10, 10, 0) 100%);
+	}
+
+	.monetary-section .section-title {
+		color: #3b82f6;
+	}
+
 	/* Energy Section */
 	.energy-section {
 		background: linear-gradient(180deg, rgba(217, 119, 6, 0.03) 0%, rgba(10, 10, 10, 0) 100%);
@@ -366,6 +444,70 @@
 
 	.energy-section .section-title {
 		color: #f59e0b;
+	}
+
+	/* Insights Section */
+	.insights-section {
+		background-color: rgba(17, 17, 17, 0.2);
+	}
+
+	.insights-section .section-title {
+		color: #10b981;
+	}
+
+	.insights-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+		gap: 2rem;
+	}
+
+	.insight-card {
+		background-color: var(--color-bg-card);
+		border: 1px solid var(--color-border);
+		border-radius: 12px;
+		padding: 2rem;
+		transition: transform 0.2s ease;
+	}
+
+	.insight-card:hover {
+		transform: translateY(-4px);
+	}
+
+	.insight-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1rem;
+	}
+
+	.insight-title {
+		font-size: 1.125rem;
+		font-weight: 600;
+		color: var(--color-text-main);
+	}
+
+	.insight-value {
+		font-size: 1.25rem;
+		font-weight: 700;
+		padding: 0.25rem 0.75rem;
+		border-radius: 9999px;
+		background-color: rgba(255, 255, 255, 0.1);
+	}
+
+	.insight-value.positive {
+		color: #10b981;
+		background-color: rgba(16, 185, 129, 0.1);
+	}
+
+	.insight-value.negative {
+		color: #ef4444;
+		background-color: rgba(239, 68, 68, 0.1);
+	}
+
+	.insight-description {
+		font-size: 0.9375rem;
+		color: var(--color-text-muted);
+		line-height: 1.6;
 	}
 
 	/* Charts Grid */
@@ -515,6 +657,3 @@
 		}
 	}
 </style>
-
-
-
