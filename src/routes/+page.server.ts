@@ -6,7 +6,11 @@ import { getYearlyInflationData } from '$lib/server/yearlyInflation';
 import { getFederalFundsRate } from '$lib/server/federalFundsRate';
 import { getRealGDP } from '$lib/server/realGDP';
 import { getTreasuryYield } from '$lib/server/treasuryYield';
-import { getMarketInsights, type IndicatorData } from '$lib/server/perplexityInsights';
+import {
+	getMarketInsights,
+	type IndicatorData,
+	type PerplexityInsightResponse
+} from '$lib/server/perplexityInsights';
 import type { PageServerLoad } from './$types';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -61,6 +65,92 @@ interface CacheData {
 
 const CACHE_FILE = '.api-cache.json';
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+const INSIGHTS_CACHE_FILE = '.insights-cache.json';
+
+// Helper to fetch Perplexity insights with monthly caching
+async function fetchInsightsWithMonthlyCache(
+	fetchFn: () => Promise<PerplexityInsightResponse>
+): Promise<PerplexityInsightResponse> {
+	const cachePath = path.resolve(INSIGHTS_CACHE_FILE);
+	const now = new Date();
+
+	// Try to read from cache
+	try {
+		if (fs.existsSync(cachePath)) {
+			const fileContent = fs.readFileSync(cachePath, 'utf-8');
+			const cache = JSON.parse(fileContent);
+
+			if (cache.insights && cache.cachedMonth && cache.cachedYear) {
+				const cachedDate = new Date(cache.cachedYear, cache.cachedMonth - 1);
+				const currentMonth = now.getMonth() + 1;
+				const currentYear = now.getFullYear();
+
+				// Check if we're still in the same month
+				if (cache.cachedMonth === currentMonth && cache.cachedYear === currentYear) {
+					console.log('[Cache] Serving Perplexity insights from monthly cache');
+					return { insights: cache.insights };
+				}
+
+				// If we're past the cached month, check if it's end of month time
+				// Only fetch new insights in the last 3 days of the month
+				const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+				const dayOfMonth = now.getDate();
+
+				// If we haven't reached the last 3 days of the month, use cached data
+				if (dayOfMonth < daysInMonth - 2) {
+					console.log(
+						`[Cache] Using previous month's insights (will refresh in last 3 days of month)`
+					);
+					return { insights: cache.insights };
+				}
+			}
+		}
+	} catch (e) {
+		console.warn('Failed to read insights cache file:', e);
+	}
+
+	// Fetch fresh insights (only in last 3 days of month or if cache is empty)
+	console.log('[API] Fetching fresh Perplexity insights');
+	try {
+		const insights = await fetchFn();
+
+		// Save to cache with current month/year
+		const cacheData = {
+			insights: insights.insights,
+			cachedMonth: now.getMonth() + 1,
+			cachedYear: now.getFullYear(),
+			cachedDate: now.toISOString()
+		};
+
+		try {
+			fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2));
+			console.log(`[Cache] Saved insights for ${cacheData.cachedMonth}/${cacheData.cachedYear}`);
+		} catch (e) {
+			console.warn('Failed to write insights cache file:', e);
+		}
+
+		return insights;
+	} catch (error) {
+		console.error('Error fetching Perplexity insights:', error);
+
+		// Try to return stale cache if available
+		try {
+			if (fs.existsSync(cachePath)) {
+				const fileContent = fs.readFileSync(cachePath, 'utf-8');
+				const cache = JSON.parse(fileContent);
+				if (cache.insights) {
+					console.warn('[Cache] Serving stale insights due to API error');
+					return { insights: cache.insights };
+				}
+			}
+		} catch (e) {
+			// Ignore cache read errors
+		}
+
+		// Return empty insights on error
+		return { insights: [] };
+	}
+}
 
 // Helper to fetch with local file caching
 async function fetchWithCache<T>(key: string, fetchFn: () => Promise<T>): Promise<T | null> {
@@ -380,7 +470,10 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 			}
 		];
 
-		const aiInsights = await getMarketInsights(indicatorData);
+		// Fetch AI insights with monthly caching (refreshes in last 3 days of each month)
+		const aiInsights = await fetchInsightsWithMonthlyCache(() =>
+			getMarketInsights(indicatorData)
+		);
 
 		return { series, insights: aiInsights.insights };
 	} catch (error) {

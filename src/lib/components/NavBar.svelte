@@ -31,7 +31,6 @@
 <nav class="navbar" class:scrolled={isScrolled}>
 	<div class="navbar-container">
 		<button class="nav-brand" onclick={() => scrollToSection('overview')}>
-			
 			<span class="brand-text">Economic Dashboard</span>
 		</button>
 
@@ -48,9 +47,17 @@
 				<button class="nav-link" onclick={() => scrollToSection('energy')}>Energy Prices</button>
 			</li>
 			<li>
-				<button class="nav-link" onclick={() => scrollToSection('methodology')}>
-					Sources
+				<button class="nav-link" onclick={() => scrollToSection('monetary')}>
+					Monetary Policy
 				</button>
+			</li>
+			<li>
+				<button class="nav-link" onclick={() => scrollToSection('insights')}>
+					Market Insights
+				</button>
+			</li>
+			<li>
+				<button class="nav-link" onclick={() => scrollToSection('methodology')}> Sources </button>
 			</li>
 		</ul>
 	</div>
@@ -157,4 +164,3 @@
 		}
 	}
 </style>
-

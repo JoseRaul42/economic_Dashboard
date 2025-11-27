@@ -4,7 +4,7 @@
 
 1. **AlphaVantage API Key**
    - Get your free API key from: https://www.alphavantage.co/support/#api-key
-   - Free tier: 5 API calls/minute, 500 calls/day
+   - Free tier: 24 api calls a day
 
 ## Vercel Environment Variables
 

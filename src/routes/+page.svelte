@@ -337,6 +337,7 @@
 							</li>
 							<li><strong>U.S. Bureau of Labor Statistics</strong> — Employment and price data</li>
 							<li><strong>AlphaVantage</strong> — Real-time economic indicators API</li>
+							<li><strong>Perplexity AI</strong> — AI-powered market insights and analysis</li>
 						</ul>
 					</div>
 
@@ -385,8 +386,8 @@
 	<footer class="footer">
 		<div class="container">
 			<p class="footer-text">
-				Built with SvelteKit, ApexCharts, and Tailwind CSS • Data from AlphaVantage, EIA, FRED, and
-				BLS
+				Built with SvelteKit, ApexCharts, and Tailwind CSS • Data from AlphaVantage, Perplexity AI,
+				EIA, FRED, and BLS
 			</p>
 			<p class="footer-subtext">
 				By <a
