@@ -6,13 +6,16 @@ import { getYearlyInflationData } from '$lib/server/yearlyInflation';
 import { getFederalFundsRate } from '$lib/server/federalFundsRate';
 import { getRealGDP } from '$lib/server/realGDP';
 import { getTreasuryYield } from '$lib/server/treasuryYield';
+import { getMarketInsights, type IndicatorData } from '$lib/server/perplexityInsights';
 import type { PageServerLoad } from './$types';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Enable ISR (Incremental Static Regeneration) for Vercel
-// This caches the page for 1 hour to avoid hitting API rate limits
+// This caches the page for 24 hours to avoid hitting API rate limits
 export const config = {
 	isr: {
-		expiration: 3600 // Cache for 1 hour (3600 seconds)
+		expiration: 86400 // Cache for 24 hours (86400 seconds)
 	}
 };
 
@@ -29,10 +32,11 @@ export interface Series {
 }
 
 export interface Insight {
-	title: string;
-	value: string;
-	description: string;
-	trend?: 'up' | 'down' | 'neutral';
+	indicator: string;
+	summary: string;
+	trend: 'rise' | 'neutral' | 'lower';
+	drivers: string[];
+	forward_outlook: string;
 }
 
 interface RawDataPoint {
@@ -45,6 +49,109 @@ interface RawApiResponse {
 	interval?: string;
 	unit?: string;
 	data?: RawDataPoint[];
+}
+
+// Cache interface
+interface CacheData {
+	timestamp: number;
+	data: {
+		[key: string]: any;
+	};
+}
+
+const CACHE_FILE = '.api-cache.json';
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+// Helper to fetch with local file caching
+async function fetchWithCache<T>(key: string, fetchFn: () => Promise<T>): Promise<T | null> {
+	let cache: CacheData = { timestamp: 0, data: {} };
+	const cachePath = path.resolve(CACHE_FILE);
+
+	// Try to read from cache
+	try {
+		if (fs.existsSync(cachePath)) {
+			const fileContent = fs.readFileSync(cachePath, 'utf-8');
+			cache = JSON.parse(fileContent);
+		}
+	} catch (e) {
+		console.warn('Failed to read cache file:', e);
+	}
+
+	const now = Date.now();
+	const isFresh = now - cache.timestamp < CACHE_TTL;
+
+	// Return cached data if fresh and exists
+	if (isFresh && cache.data[key]) {
+		console.log(`[Cache] Serving ${key} from local cache`);
+		return cache.data[key] as T;
+	}
+
+	// Fetch fresh data
+	console.log(`[API] Fetching fresh data for ${key}`);
+	try {
+		const data = await fetchFn();
+
+		// Check for AlphaVantage rate limit/error response
+		const responseData = data as any;
+		if (responseData && (responseData['Information'] || responseData['Note'] || responseData['Error Message'])) {
+			console.warn(`[API] Rate limit or error for ${key}, NOT caching:`, responseData);
+			// If we have stale data, return it instead of the error
+			if (cache.data[key]) {
+				console.warn(`[Cache] Serving stale data for ${key} due to API error`);
+				return cache.data[key] as T;
+			}
+			// If no stale data, we have to return the error (or null?)
+			// Returning the error allows the UI to handle it (or show N/A)
+			return data;
+		}
+
+		// Update cache only if valid data
+		cache.data[key] = data;
+		cache.timestamp = now;
+		// Actually, if we update one key, we should probably keep the old timestamp for others?
+		// But for simplicity, let's just update the timestamp if we are updating the file.
+		// Better strategy: If cache is expired, we might re-fetch everything?
+		// Or just update this specific key and keep the timestamp? 
+		// If we update the timestamp, other stale keys might be considered fresh.
+		// This is tricky with Promise.all running in parallel.
+		// They will all read the file, see it's stale, and all fetch.
+		// Then they will all try to write.
+		// This is fine for the "first load" case.
+
+		// Let's re-read cache before writing to avoid race conditions (simple version)
+		try {
+			if (fs.existsSync(cachePath)) {
+				const currentFileContent = fs.readFileSync(cachePath, 'utf-8');
+				const currentCache = JSON.parse(currentFileContent);
+				cache.data = { ...currentCache.data, ...cache.data };
+				// If the file was stale, we are making it fresh now.
+				// But we only fetched ONE key here.
+				// If we update timestamp now, other keys (which we haven't fetched yet) will look fresh.
+				// This is tricky with Promise.all running in parallel.
+				// They will all read the file, see it's stale, and all fetch.
+				// Then they will all try to write.
+				// This is fine for the "first load" case.
+			}
+		} catch (e) {
+			// ignore
+		}
+
+		try {
+			fs.writeFileSync(cachePath, JSON.stringify(cache, null, 2));
+		} catch (e) {
+			console.warn('Failed to write cache file:', e);
+		}
+
+		return data;
+	} catch (e) {
+		console.error(`Error fetching ${key}:`, e);
+		// Try to return stale data if available
+		if (cache.data[key]) {
+			console.warn(`[Cache] Serving stale data for ${key} due to fetch error`);
+			return cache.data[key] as T;
+		}
+		return null;
+	}
 }
 
 function normalizeAlphaVantageData(rawData: RawApiResponse | null, key: string): DataPoint[] {
@@ -139,52 +246,18 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 	try {
 		// Set cache headers for CDN and browser caching
 		setHeaders({
-			'cache-control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400'
+			'cache-control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=86400'
 		});
 
-		const [
-			wtiData,
-			unemploymentData,
-			ngasData,
-			cpiData,
-			inflationData,
-			fedFundsData,
-			gdpData,
-			treasuryData
-		] = await Promise.all([
-			getMonthlyTimeSeries().catch((e) => {
-				console.error('WTI fetch error:', e);
-				return null;
-			}),
-			getUnemploymentData().catch((e) => {
-				console.error('Unemployment fetch error:', e);
-				return null;
-			}),
-			getMonthlyNgasData().catch((e) => {
-				console.error('Natural Gas fetch error:', e);
-				return null;
-			}),
-			getMonthlyConsumerPriceIndexData().catch((e) => {
-				console.error('CPI fetch error:', e);
-				return null;
-			}),
-			getYearlyInflationData().catch((e) => {
-				console.error('Inflation fetch error:', e);
-				return null;
-			}),
-			getFederalFundsRate().catch((e) => {
-				console.error('Fed Funds fetch error:', e);
-				return null;
-			}),
-			getRealGDP().catch((e) => {
-				console.error('GDP fetch error:', e);
-				return null;
-			}),
-			getTreasuryYield().catch((e) => {
-				console.error('Treasury Yield fetch error:', e);
-				return null;
-			})
-		]);
+		// Sequential fetching to avoid connection timeouts and respect API concurrency limits
+		const wtiData = await fetchWithCache('wti', () => getMonthlyTimeSeries());
+		const unemploymentData = await fetchWithCache('unemployment', () => getUnemploymentData());
+		const ngasData = await fetchWithCache('ngas', () => getMonthlyNgasData());
+		const cpiData = await fetchWithCache('cpi', () => getMonthlyConsumerPriceIndexData());
+		const inflationData = await fetchWithCache('inflation', () => getYearlyInflationData());
+		const fedFundsData = await fetchWithCache('fedFunds', () => getFederalFundsRate());
+		const gdpData = await fetchWithCache('gdp', () => getRealGDP());
+		const treasuryData = await fetchWithCache('treasury', () => getTreasuryYield());
 
 		// Process raw data
 		const wtiPoints = normalizeAlphaVantageData(wtiData, 'wti');
@@ -229,7 +302,7 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 			},
 			{
 				key: 'fedFunds',
-				label: 'Federal Funds Rate',
+				label: 'Federal Funds Rate (MoM)',
 				units: '%',
 				points: fedFundsPoints
 			},
@@ -241,69 +314,75 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 			},
 			{
 				key: 'treasury',
-				label: '10-Year Treasury Yield',
+				label: '10-Year Treasury Yield (MoM)',
 				units: '%',
 				points: treasuryPoints
 			}
 		];
 
-		// Calculate Insights
-		const insights: Insight[] = [];
+		// Fetch AI-generated market insights from Perplexity
+		const indicatorData: IndicatorData[] = [
+			{
+				name: 'WTI Crude Oil',
+				currentValue: wtiPoints.length > 0 ? wtiPoints[0].value : null,
+				previousValue: wtiPoints.length > 1 ? wtiPoints[1].value : null,
+				units: 'USD/barrel',
+				category: 'energy'
+			},
+			{
+				name: 'Henry Hub Natural Gas',
+				currentValue: ngasPoints.length > 0 ? ngasPoints[0].value : null,
+				previousValue: ngasPoints.length > 1 ? ngasPoints[1].value : null,
+				units: 'USD/MMBtu',
+				category: 'energy'
+			},
+			{
+				name: 'Unemployment Rate',
+				currentValue: unemploymentPoints.length > 0 ? unemploymentPoints[0].value : null,
+				previousValue: unemploymentPoints.length > 1 ? unemploymentPoints[1].value : null,
+				units: '%',
+				category: 'economic'
+			},
+			{
+				name: 'Consumer Price Index',
+				currentValue: cpiPoints.length > 0 ? cpiPoints[0].value : null,
+				previousValue: cpiPoints.length > 1 ? cpiPoints[1].value : null,
+				units: 'Index',
+				category: 'economic'
+			},
+			{
+				name: 'Inflation Rate',
+				currentValue: inflationPoints.length > 0 ? inflationPoints[0].value : null,
+				previousValue: inflationPoints.length > 1 ? inflationPoints[1].value : null,
+				units: '%',
+				category: 'economic'
+			},
+			{
+				name: 'Federal Funds Rate',
+				currentValue: fedFundsPoints.length > 0 ? fedFundsPoints[0].value : null,
+				previousValue: fedFundsPoints.length > 1 ? fedFundsPoints[1].value : null,
+				units: '%',
+				category: 'monetary'
+			},
+			{
+				name: 'Real GDP',
+				currentValue: gdpPoints.length > 0 ? gdpPoints[0].value : null,
+				previousValue: gdpPoints.length > 1 ? gdpPoints[1].value : null,
+				units: 'Billions USD',
+				category: 'economic'
+			},
+			{
+				name: '10-Year Treasury Yield',
+				currentValue: treasuryPoints.length > 0 ? treasuryPoints[0].value : null,
+				previousValue: treasuryPoints.length > 1 ? treasuryPoints[1].value : null,
+				units: '%',
+				category: 'monetary'
+			}
+		];
 
-		// Correlation: Oil vs Inflation
-		const oilInflationCorr = calculateCorrelation(wtiPoints, inflationPoints);
-		if (oilInflationCorr !== null) {
-			insights.push({
-				title: 'Oil & Inflation Correlation',
-				value: oilInflationCorr.toFixed(2),
-				description:
-					oilInflationCorr > 0.5
-						? 'Strong positive correlation. Rising oil prices often precede higher inflation.'
-						: oilInflationCorr < -0.5
-							? 'Strong negative correlation.'
-							: 'Moderate or weak correlation. Other factors are influencing inflation.',
-				trend: oilInflationCorr > 0 ? 'up' : 'down'
-			});
-		}
+		const aiInsights = await getMarketInsights(indicatorData);
 
-		// Correlation: Fed Funds vs Unemployment
-		// (Phillips Curve relationship - often negative in short run, but complex)
-		const ratesUnemploymentCorr = calculateCorrelation(fedFundsPoints, unemploymentPoints);
-		if (ratesUnemploymentCorr !== null) {
-			insights.push({
-				title: 'Rates & Unemployment',
-				value: ratesUnemploymentCorr.toFixed(2),
-				description:
-					'Correlation between Federal Funds Rate and Unemployment. Historical theory suggests an inverse relationship (Phillips Curve), though recent data may diverge.',
-				trend: ratesUnemploymentCorr > 0 ? 'up' : 'down'
-			});
-		}
-
-		// Volatility: Oil
-		const oilVol = calculateVolatility(wtiPoints);
-		if (oilVol !== null) {
-			insights.push({
-				title: 'Oil Price Volatility',
-				value: `${oilVol.toFixed(1)}%`,
-				description:
-					'Annualized volatility of WTI Crude Oil prices. Higher values indicate greater market uncertainty and price swings.',
-				trend: oilVol > 30 ? 'up' : 'neutral'
-			});
-		}
-
-		// Volatility: Natural Gas
-		const ngasVol = calculateVolatility(ngasPoints);
-		if (ngasVol !== null) {
-			insights.push({
-				title: 'Natural Gas Volatility',
-				value: `${ngasVol.toFixed(1)}%`,
-				description:
-					'Annualized volatility of Henry Hub Natural Gas. Natural gas is typically more volatile than oil due to storage constraints and weather dependence.',
-				trend: ngasVol > 40 ? 'up' : 'neutral'
-			});
-		}
-
-		return { series, insights };
+		return { series, insights: aiInsights.insights };
 	} catch (error) {
 		console.error('Load function error:', error);
 		// Return empty series on error

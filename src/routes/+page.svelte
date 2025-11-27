@@ -34,8 +34,7 @@
 		<div class="container">
 			<h1 class="hero-title">US Economy & Upstream Energy Dashboard</h1>
 			<p class="hero-subtitle">
-				Tracking macroeconomic indicators and energy markets through clean,
-				real-time visualizations
+				Tracking macroeconomic indicators and energy markets through clean, real-time visualizations
 			</p>
 		</div>
 	</section>
@@ -260,23 +259,63 @@
 			<div class="section-header">
 				<h2 class="section-title">Market Insights</h2>
 				<p class="section-description">
-					Automated analysis of correlations and market volatility
+					AI-powered analysis of current economic trends and market dynamics
 				</p>
 			</div>
 
-			<div class="insights-grid">
-				{#each insights as insight}
-					<div class="insight-card">
-						<div class="insight-header">
-							<h3 class="insight-title">{insight.title}</h3>
-							<div class="insight-value" class:positive={insight.trend === 'up'} class:negative={insight.trend === 'down'}>
-								{insight.value}
+			{#if insights.length > 0}
+				<div class="insights-grid">
+					{#each insights as insight}
+						<div class="insight-card">
+							<div class="insight-header">
+								<h3 class="insight-title">{insight.indicator}</h3>
+								<div
+									class="insight-trend-badge"
+									class:trend-rise={insight.trend === 'rise'}
+									class:trend-neutral={insight.trend === 'neutral'}
+									class:trend-lower={insight.trend === 'lower'}
+								>
+									{#if insight.trend === 'rise'}
+										↑ Rising
+									{:else if insight.trend === 'lower'}
+										↓ Lower
+									{:else}
+										→ Stable
+									{/if}
+								</div>
 							</div>
+
+							<p class="insight-summary">{insight.summary}</p>
+
+							{#if insight.drivers && insight.drivers.length > 0}
+								<div class="insight-drivers">
+									<h4 class="drivers-title">Key Drivers:</h4>
+									<ul class="drivers-list">
+										{#each insight.drivers as driver}
+											<li>{driver}</li>
+										{/each}
+									</ul>
+								</div>
+							{/if}
+
+							{#if insight.forward_outlook}
+								<div class="insight-outlook">
+									<h4 class="outlook-title">Forward Outlook:</h4>
+									<p class="outlook-text">{insight.forward_outlook}</p>
+								</div>
+							{/if}
 						</div>
-						<p class="insight-description">{insight.description}</p>
+					{/each}
+				</div>
+			{:else}
+				<div class="insights-grid">
+					<div class="insight-card insight-placeholder">
+						<p class="insight-summary">
+							Market insights are currently unavailable. Please check back later.
+						</p>
 					</div>
-				{/each}
-			</div>
+				</div>
+			{/if}
 		</div>
 	</section>
 
@@ -290,7 +329,6 @@
 					<div class="methodology-item">
 						<h3 class="methodology-subtitle">Data Sources</h3>
 						<ul class="methodology-list">
-					
 							<li>
 								<strong>U.S. Energy Information Administration</strong> — Oil and natural gas spot prices
 							</li>
@@ -320,8 +358,12 @@
 							<li>
 								<strong>Year-over-Year (YoY):</strong> Percentage change from same month last year
 							</li>
-							<li><strong>Correlation:</strong> Pearson correlation coefficient between time series</li>
-							<li><strong>Volatility:</strong> Annualized standard deviation of monthly percent changes</li>
+							<li>
+								<strong>Correlation:</strong> Pearson correlation coefficient between time series
+							</li>
+							<li>
+								<strong>Volatility:</strong> Annualized standard deviation of monthly percent changes
+							</li>
 						</ul>
 					</div>
 
@@ -347,7 +389,11 @@
 				BLS
 			</p>
 			<p class="footer-subtext">
-				By <a href="https://www.linkedin.com/in/jose-valois-29a120213/" target="_blank" rel="noopener noreferrer">Jose Valois</a>
+				By <a
+					href="https://www.linkedin.com/in/jose-valois-29a120213/"
+					target="_blank"
+					rel="noopener noreferrer">Jose Valois</a
+				>
 			</p>
 		</div>
 	</footer>
@@ -417,11 +463,7 @@
 
 	/* Economic Section */
 	.economic-section {
-		background: linear-gradient(
-			180deg,
-			rgba(255, 90, 31, 0.03) 0%,
-			rgba(10, 10, 10, 0) 100%
-		);
+		background: linear-gradient(180deg, rgba(255, 90, 31, 0.03) 0%, rgba(10, 10, 10, 0) 100%);
 	}
 
 	.economic-section .section-title {
@@ -465,12 +507,20 @@
 		background-color: var(--color-bg-card);
 		border: 1px solid var(--color-border);
 		border-radius: 12px;
-		padding: 2rem;
-		transition: transform 0.2s ease;
+		padding: 1.5rem;
+		transition: all 0.3s ease;
 	}
 
 	.insight-card:hover {
-		transform: translateY(-4px);
+		border-color: var(--color-accent);
+		transform: translateY(-2px);
+		box-shadow: 0 8px 16px rgba(255, 90, 31, 0.1);
+	}
+
+	.insight-card.insight-placeholder {
+		text-align: center;
+		padding: 3rem;
+		border-style: dashed;
 	}
 
 	.insight-header {
@@ -478,36 +528,106 @@
 		justify-content: space-between;
 		align-items: center;
 		margin-bottom: 1rem;
+		gap: 1rem;
 	}
 
 	.insight-title {
 		font-size: 1.125rem;
 		font-weight: 600;
-		color: var(--color-text-main);
+		color: var(--color-text-primary);
+		margin: 0;
 	}
 
-	.insight-value {
-		font-size: 1.25rem;
-		font-weight: 700;
-		padding: 0.25rem 0.75rem;
-		border-radius: 9999px;
-		background-color: rgba(255, 255, 255, 0.1);
+	.insight-trend-badge {
+		padding: 0.375rem 0.75rem;
+		border-radius: 6px;
+		font-size: 0.875rem;
+		font-weight: 600;
+		white-space: nowrap;
+		flex-shrink: 0;
 	}
 
-	.insight-value.positive {
+	.insight-trend-badge.trend-rise {
 		color: #10b981;
 		background-color: rgba(16, 185, 129, 0.1);
+		border: 1px solid rgba(16, 185, 129, 0.3);
 	}
 
-	.insight-value.negative {
+	.insight-trend-badge.trend-lower {
 		color: #ef4444;
 		background-color: rgba(239, 68, 68, 0.1);
+		border: 1px solid rgba(239, 68, 68, 0.3);
 	}
 
-	.insight-description {
+	.insight-trend-badge.trend-neutral {
+		color: #8b5cf6;
+		background-color: rgba(139, 92, 246, 0.1);
+		border: 1px solid rgba(139, 92, 246, 0.3);
+	}
+
+	.insight-summary {
 		font-size: 0.9375rem;
 		color: var(--color-text-muted);
 		line-height: 1.6;
+		margin: 0 0 1.25rem 0;
+	}
+
+	.insight-drivers {
+		margin-top: 1.25rem;
+		padding: 1rem;
+		background-color: rgba(255, 90, 31, 0.05);
+		border-left: 3px solid var(--color-accent);
+		border-radius: 6px;
+	}
+
+	.drivers-title {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--color-accent);
+		margin: 0 0 0.75rem 0;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.drivers-list {
+		margin: 0;
+		padding-left: 1.25rem;
+		color: var(--color-text-muted);
+	}
+
+	.drivers-list li {
+		font-size: 0.875rem;
+		line-height: 1.6;
+		margin-bottom: 0.5rem;
+	}
+
+	.drivers-list li:last-child {
+		margin-bottom: 0;
+	}
+
+	.insight-outlook {
+		margin-top: 1.25rem;
+		padding: 1rem;
+		background-color: rgba(139, 92, 246, 0.05);
+		border-left: 3px solid #8b5cf6;
+		border-radius: 6px;
+	}
+
+	.outlook-title {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: #8b5cf6;
+		margin: 0 0 0.5rem 0;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.outlook-text {
+		font-size: 0.9375rem;
+		color: var(--color-text-muted);
+		line-height: 1.6;
+		margin: 0;
+		font-style: italic;
 	}
 
 	/* Charts Grid */
