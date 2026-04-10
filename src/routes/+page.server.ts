@@ -399,7 +399,9 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 		const cpiPoints = normalizeFREDData(cpiData, 'cpi');
 		const inflationPoints = normalizeFREDData(inflationData, 'inflation');
 		const fedFundsPoints = normalizeFREDData(fedFundsData, 'fedFunds');
-		const gdpPoints = normalizeFREDData(gdpData, 'gdp');
+		// Convert GDP from billions to trillions for cleaner display
+		const gdpPointsRaw = normalizeFREDData(gdpData, 'gdp');
+		const gdpPoints = gdpPointsRaw.map(p => ({ ...p, value: p.value / 1000 }));
 		const treasuryPoints = normalizeFREDData(treasuryData, 'treasury');
 
 		const series: Series[] = [
@@ -442,7 +444,7 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 			{
 				key: 'gdp',
 				label: 'Real GDP (Annual)',
-				units: 'Billions USD',
+				units: 'Trillions USD',
 				points: gdpPoints
 			},
 			{
