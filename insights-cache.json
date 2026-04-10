@@ -1,0 +1,111 @@
+{
+  "insights": [
+    {
+      "indicator": "WTI Crude Oil",
+      "summary": "WTI crude oil is trading around $112-114 per barrel, reflecting significant geopolitical tensions in the Middle East. The market is experiencing heightened volatility due to Iran-related supply disruptions, including threats to close the Strait of Hormuz and recent attacks on tankers, which have created substantial upward pressure on prices despite underlying demand concerns.",
+      "trend": "rise",
+      "drivers": [
+        "Strait of Hormuz closure threats and Iranian military actions against shipping",
+        "Tanker strikes and supply disruption risks in critical energy transit routes",
+        "Geopolitical tensions between Iran and the United States limiting diplomatic resolution",
+        "Strong underlying demand absorption on price dips indicating market support",
+        "IEA warnings of imminent supply disruptions affecting European markets"
+      ],
+      "forward_outlook": "Oil prices face continued volatility dependent on resolution of Iran tensions and Strait of Hormuz stability. Any escalation in regional conflict could push prices higher, while successful diplomatic talks could trigger sharp corrections."
+    },
+    {
+      "indicator": "Henry Hub Natural Gas",
+      "summary": "Natural gas prices at $3.45 per MMBtu reflect elevated energy market conditions driven by similar geopolitical supply concerns affecting crude oil markets. The 60.5% increase suggests significant market stress in energy commodities broadly.",
+      "trend": "rise",
+      "drivers": [
+        "Spillover effects from crude oil market volatility and Middle East tensions",
+        "Supply chain concerns affecting liquefied natural gas (LNG) exports",
+        "Seasonal demand patterns and storage level dynamics",
+        "Correlation with broader energy market risk premium",
+        "Potential supply disruptions from global energy infrastructure concerns"
+      ],
+      "forward_outlook": "Natural gas prices will likely remain elevated as long as crude oil geopolitical risks persist. Resolution of Middle East tensions could ease prices, while any further supply disruptions would sustain current elevated levels."
+    },
+    {
+      "indicator": "Unemployment Rate",
+      "summary": "The unemployment rate stands at 3.40%, representing a 10.5% improvement from previous levels and indicating a tightening labor market. This reflects continued strength in employment conditions despite broader economic headwinds.",
+      "trend": "lower",
+      "drivers": [
+        "Sustained job creation across economic sectors",
+        "Labor market resilience amid mixed economic signals",
+        "Potential wage pressure from tight labor supply",
+        "Business confidence supporting hiring despite inflation concerns",
+        "Demographic factors and workforce participation trends"
+      ],
+      "forward_outlook": "The strong labor market may face pressure if economic growth continues to decline or if businesses respond to higher input costs by reducing hiring. Continued low unemployment could intensify wage-price dynamics."
+    },
+    {
+      "indicator": "Consumer Price Index",
+      "summary": "The CPI stands at 21.48 with a modest 0.6% decline, indicating persistent elevated price levels in the economy. Despite the slight decrease, price levels remain substantially above historical norms, reflecting the cumulative impact of prior inflation cycles.",
+      "trend": "neutral",
+      "drivers": [
+        "Energy price volatility affecting headline CPI components",
+        "Sticky core inflation from prior demand pressures",
+        "Supply chain normalization providing modest relief",
+        "Wage growth supporting price floor in service sectors",
+        "Mixed signals from commodity and input cost trends"
+      ],
+      "forward_outlook": "CPI trajectory will depend heavily on energy price stabilization and labor market dynamics. Further energy price increases could reverse the modest decline, while economic slowdown may provide additional disinflationary pressure."
+    },
+    {
+      "indicator": "Inflation Rate",
+      "summary": "The inflation rate is 1.46%, up 36.2% from previous levels, suggesting a reacceleration of price growth pressures. This increase indicates that disinflationary trends may be reversing, driven by energy costs and potential demand resilience.",
+      "trend": "rise",
+      "drivers": [
+        "Energy price surge from Middle East geopolitical tensions",
+        "Tight labor market supporting wage and service price growth",
+        "Supply chain disruptions from regional conflicts",
+        "Potential demand resilience offsetting economic slowdown concerns",
+        "Commodity price volatility feeding into broader price pressures"
+      ],
+      "forward_outlook": "Inflation pressures will intensify if energy prices remain elevated and labor markets stay tight. Central bank policy responses and economic growth trajectory will be critical in determining whether this represents a temporary spike or sustained reacceleration."
+    },
+    {
+      "indicator": "Federal Funds Rate",
+      "summary": "The Federal Funds Rate is at 0.80%, down 34.4% from previous levels, indicating significant monetary policy easing. This substantial rate reduction reflects central bank efforts to support economic activity amid growth concerns and financial stability considerations.",
+      "trend": "lower",
+      "drivers": [
+        "Economic growth deceleration requiring policy accommodation",
+        "Central bank response to financial stability concerns",
+        "Attempt to offset demand weakness and support employment",
+        "Real GDP contraction pressures necessitating stimulus",
+        "Balance between inflation concerns and growth support"
+      ],
+      "forward_outlook": "Further rate adjustments will depend on inflation trajectory and economic growth data. If inflation reaccelerates significantly, the Fed may pause or reverse easing; if growth weakens further, additional cuts could follow."
+    },
+    {
+      "indicator": "Real GDP",
+      "summary": "Real GDP stands at $2,184.61 billion with a 4.0% decline, indicating significant economic contraction. This substantial reduction reflects meaningful weakness in economic activity and production across the economy.",
+      "trend": "lower",
+      "drivers": [
+        "Demand shock from energy price surge affecting business and consumer spending",
+        "Supply-side constraints from geopolitical disruptions",
+        "Potential financial market stress from energy and commodity volatility",
+        "Business investment pullback amid uncertainty",
+        "Consumer spending moderation from inflation and wealth effects"
+      ],
+      "forward_outlook": "Economic recovery will depend on resolution of geopolitical tensions and stabilization of energy prices. Continued GDP contraction could trigger more aggressive policy support, while energy price normalization could enable recovery."
+    },
+    {
+      "indicator": "10-Year Treasury Yield",
+      "summary": "The 10-year Treasury yield is 2.83%, down 7.2% from previous levels, reflecting flight-to-safety demand and lower growth expectations. The decline indicates investors are pricing in economic weakness and reduced inflation expectations relative to prior periods.",
+      "trend": "lower",
+      "drivers": [
+        "Safe-haven demand from geopolitical uncertainty and energy market volatility",
+        "Lower growth expectations from real GDP contraction",
+        "Reduced inflation expectations despite near-term energy price pressures",
+        "Federal Reserve rate cuts supporting lower long-term rates",
+        "Risk-off sentiment in financial markets"
+      ],
+      "forward_outlook": "Treasury yields will likely remain under pressure if economic weakness persists and geopolitical tensions continue. Yields could rise if energy prices stabilize and growth expectations improve, or if inflation reaccelerates significantly."
+    }
+  ],
+  "cachedMonth": 4,
+  "cachedYear": 2026,
+  "cachedDate": "2026-04-10T00:59:19.127Z"
+}

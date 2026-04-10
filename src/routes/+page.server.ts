@@ -55,6 +55,22 @@ interface RawApiResponse {
 	data?: RawDataPoint[];
 }
 
+interface FREDObservation {
+	realtime_start: string;
+	realtime_end: string;
+	date: string;
+	value: string;
+}
+
+interface FREDApiResponse {
+	realtime_start?: string;
+	realtime_end?: string;
+	observation_start?: string;
+	observation_end?: string;
+	units?: string;
+	observations?: FREDObservation[];
+}
+
 // Cache interface
 interface CacheData {
 	timestamp: number;
@@ -188,9 +204,9 @@ async function fetchWithCache<T>(key: string, fetchFn: () => Promise<T>): Promis
 	try {
 		const data = await fetchFn();
 
-		// Check for AlphaVantage rate limit/error response
+		// Check for FRED rate limit/error response
 		const responseData = data as any;
-		if (responseData && (responseData['Information'] || responseData['Note'] || responseData['Error Message'])) {
+		if (responseData && (responseData['error_code'] || responseData['error_message'])) {
 			console.warn(`[API] Rate limit or error for ${key}, NOT caching:`, responseData);
 			// If we have stale data, return it instead of the error
 			if (cache.data[key]) {
@@ -256,6 +272,40 @@ function normalizeAlphaVantageData(rawData: RawApiResponse | null, key: string):
 			const value = parseFloat(item.value);
 			// Skip invalid entries
 			if (!item.date || isNaN(value)) {
+				console.warn(`Invalid data point in ${key}:`, item);
+				return null;
+			}
+			return {
+				date: item.date,
+				value: value
+			};
+		})
+		.filter((item): item is DataPoint => item !== null);
+}
+
+function normalizeFREDData(rawData: FREDApiResponse | null, key: string): DataPoint[] {
+	// Handle case where rawData might be undefined or null
+	if (!rawData) {
+		console.warn(`No data received for ${key}`);
+		return [];
+	}
+
+	// Check if observations array exists (FRED uses 'observations' not 'data')
+	if (!rawData.observations || !Array.isArray(rawData.observations)) {
+		console.warn(`Invalid data structure for ${key}:`, rawData);
+		return [];
+	}
+
+	// Map and parse the data points
+	return rawData.observations
+		.map((item: FREDObservation) => {
+			// FRED returns "." for missing values - skip these
+			if (!item.date || item.value === '.' || item.value === '') {
+				return null;
+			}
+			const value = parseFloat(item.value);
+			// Skip invalid entries
+			if (isNaN(value)) {
 				console.warn(`Invalid data point in ${key}:`, item);
 				return null;
 			}
@@ -342,15 +392,15 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 		const gdpData = await fetchWithCache('gdp', () => getRealGDP());
 		const treasuryData = await fetchWithCache('treasury', () => getTreasuryYield());
 
-		// Process raw data
-		const wtiPoints = normalizeAlphaVantageData(wtiData, 'wti');
-		const unemploymentPoints = normalizeAlphaVantageData(unemploymentData, 'unemployment');
-		const ngasPoints = normalizeAlphaVantageData(ngasData, 'ngas');
-		const cpiPoints = normalizeAlphaVantageData(cpiData, 'cpi');
-		const inflationPoints = normalizeAlphaVantageData(inflationData, 'inflation');
-		const fedFundsPoints = normalizeAlphaVantageData(fedFundsData, 'fedFunds');
-		const gdpPoints = normalizeAlphaVantageData(gdpData, 'gdp');
-		const treasuryPoints = normalizeAlphaVantageData(treasuryData, 'treasury');
+		// Process raw data from FRED API
+		const wtiPoints = normalizeFREDData(wtiData, 'wti');
+		const unemploymentPoints = normalizeFREDData(unemploymentData, 'unemployment');
+		const ngasPoints = normalizeFREDData(ngasData, 'ngas');
+		const cpiPoints = normalizeFREDData(cpiData, 'cpi');
+		const inflationPoints = normalizeFREDData(inflationData, 'inflation');
+		const fedFundsPoints = normalizeFREDData(fedFundsData, 'fedFunds');
+		const gdpPoints = normalizeFREDData(gdpData, 'gdp');
+		const treasuryPoints = normalizeFREDData(treasuryData, 'treasury');
 
 		const series: Series[] = [
 			{
